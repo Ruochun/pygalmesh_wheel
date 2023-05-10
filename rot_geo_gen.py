@@ -15,9 +15,13 @@ def pyBernstein(degree, t):
 
 # 2D shapes are in x-z plane. After 3D wheels are created, they are rotated about x to make them face x-forward.
 # cp_deviation is the percentage that the mid 2 control points defining the wheel perimeter deviates from the position where the wheel surface is perfect flat, in z direction 
-def GenWheel(rad=0.25, width=0.2, cp_deviation=0., mu=0.4, g_height=0.025, g_width=0.005, g_density=12, g_amp=0., g_period=0, g_curved=False):
+def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005, g_density=12, g_amp=0., g_period=0, g_curved=False):
     # The angle between 2 adjacent grousers
     g_angle = 2 * math.pi / g_density
+    # 1 if this wheel is convex (bump outwards)
+    convex = 1 if cp_deviation >= 0. else -1
+    # small wiggle room needed in many places
+    wiggle_dist = g_width / 2
 
     # the wheel perimeter shape is defined by a 4-point Bezier curve
     outer_CPs = np.empty((num_CPs, 2)).astype(float)
@@ -30,7 +34,7 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., mu=0.4, g_height=0.025, g_wid
     inner_CPs[:, 0] -= shell_thickness
 
     # Now create a closed polygon using the 2 perimeters
-    num_sample = 10
+    num_sample = 20
     bz_t = np.linspace(0, 1, num_sample)
     B = np.zeros((num_sample, num_CPs)).astype(float)
     for i in range(num_sample):
@@ -42,15 +46,78 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., mu=0.4, g_height=0.025, g_wid
     # Ask pygalmesh to create the shape
     wheel_cross_sec = pygalmesh.Polygon2D(outer_list.tolist() + (np.flip(inner_list, axis=0)).tolist())
     wheel_peri = pygalmesh.RingExtrude(wheel_cross_sec, max_edge_size_at_feature_edges)
+    # rotate it
+    wheel_peri = pygalmesh.Rotate(wheel_peri, [1, 0, 0], math.pi / 2)
 
+    # Now add grousers
+    # 
+    g_seg = []
+    g_seed = np.array([0., -width/2, rad]) 
+    # Each grouser period, num of sample points
+    num_g_p_sample = 5 if not(g_curved) else 15
+    # Start and end t point of each period
+    s_e_t = np.linspace(0, 1, g_period+1)
+    for i in range(g_period):
+        start_t = s_e_t[i]
+        end_t = s_e_t[i+1]
+        per_seg_lin_length = width / g_period / num_g_p_sample
+        period_last_y = 0.
+        last_signed_bump = 0.
+        for j in range(1, num_g_p_sample):
+            t = start_t + (end_t-start_t)/num_g_p_sample*j
+            b = pyBernstein(num_CPs - 1, t)
+            # eval_pnt[1] gives the vertical move dist
+            eval_pnt = b @ outer_CPs
+            signed_wheel_bump = eval_pnt[0] - rad
+            bump_diff = signed_wheel_bump - last_signed_bump
+            last_signed_bump = last_signed_bump
+            # planal length of this grouser segment
+            period_this_y = np.sin(math.pi*2/num_g_p_sample*j)*g_amp
+            planal_length = np.sqrt((period_this_y-period_last_y)**2 + per_seg_lin_length**2)
+            rot_angle = np.arctan((period_this_y-period_last_y)/per_seg_lin_length)
+            period_last_y = period_this_y
+            # finally, the cross-section parallelogram shape
+            parallelogram_deg = np.arctan(bump_diff/planal_length)
+            point2 = [planal_length+np.cos(parallelogram_deg)*wiggle_dist, bump_diff+np.sin(parallelogram_deg)*wiggle_dist]
+            point3 = point2.copy()
+            point3[1] += g_height
+            parallelogram = pygalmesh.Polygon2D([[0,0], point2, point3, [0, g_height]])
+            print([[0,0], point2, point3, [0, g_height]])
+            # create the shape (bugged, only z direction works)
+            half1 = pygalmesh.Extrude(
+                parallelogram,
+                [0.0, 0.0, g_width/2],
+                0
+            )
+            half2 = pygalmesh.Extrude(
+                parallelogram,
+                [0.0, 0.0, -g_width/2],
+                0
+            )
+            seg = pygalmesh.Union([half1, half2])
+            # rotate so facing x
+            seg = pygalmesh.Translate(seg, [-g_height/2, 0, 0])
+            seg = pygalmesh.Rotate(seg, [0,1,0], math.pi/2)
+            
+            # rotate and move...
+            seg = pygalmesh.Rotate(seg, [0,0,1], rot_angle)
+            seg = pygalmesh.Translate(seg, g_seed.tolist())
+           
 
+            g_seg.append(seg)
+            break
+
+        break
+
+    # wheel = pygalmesh.Union(g_seg + [wheel_peri])
+    wheel = pygalmesh.Union(g_seg)
 
     mesh = pygalmesh.generate_surface_mesh(
-        wheel_peri,
+        wheel,
         # bounding_sphere_radius = 1.0,
         min_facet_angle = 15.0,
-        max_radius_surface_delaunay_ball = 0.002,
-        max_facet_distance = 0.002,
+        max_radius_surface_delaunay_ball = 0.001,
+        max_facet_distance = 0.001,
         verbose = False
     )
 
@@ -59,5 +126,5 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., mu=0.4, g_height=0.025, g_wid
     return mesh
 
 if __name__ == "__main__":
-    mesh = GenWheel()
+    mesh = GenWheel(g_height=0.025, g_width=0.005, g_density=12, g_amp=0.02, g_period=3, g_curved=False)
     mesh.write("wheel.obj")
