@@ -15,7 +15,7 @@ def pyBernstein(degree, t):
 
 # 2D shapes are in x-z plane. After 3D wheels are created, they are rotated about x to make them face x-forward.
 # cp_deviation is the percentage that the mid 2 control points defining the wheel perimeter deviates from the position where the wheel surface is perfect flat, in z direction 
-def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005, g_density=12, g_amp=0., g_period=0, g_curved=False):
+def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005, g_density=12, g_amp=0., g_period=1, g_curved=False):
     # The angle between 2 adjacent grousers
     g_angle = 2 * math.pi / g_density
     # 1 if this wheel is convex (bump outwards)
