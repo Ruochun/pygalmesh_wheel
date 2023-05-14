@@ -18,7 +18,7 @@ parser.add_argument("--cp_deviation", "-c", type=float, dest="cp_deviation", def
                     help="Wheel's outer perimeter control points' vertical deviation distance")
 parser.add_argument("--height", "-g", type=float, dest="g_height", default=0.025,
                     help="Height of the grousers")
-parser.add_argument("--thickness", "-t", type=float, dest="g_width", default=0.005,
+parser.add_argument("--thickness", "-t", type=float, dest="g_width", default=0.01,
                     help="Width (thickness) of the grousers")
 parser.add_argument("--amp", "-a", type=float, dest="g_amp", default=0.03,
                     help="Amplitude of the grousers (as they have sinusoidal shapes)")

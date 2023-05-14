@@ -4,7 +4,7 @@ import numpy as np
 from scipy.special import comb
 
 shell_thickness = 0.02
-max_edge_size_at_feature_edges = 0.1
+max_edge_size_at_feature_edges = 0.002
 num_CPs = 4
 
 def pyBernstein(degree, t):
@@ -21,7 +21,7 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005
     # 1 if this wheel is convex (bump outwards)
     convex = 1 if cp_deviation >= 0. else -1
     # small wiggle room needed in many places
-    wiggle_dist = g_width / 2
+    wiggle_dist = g_width / 4 
     small_dist = 0.001
 
     # the wheel perimeter shape is defined by a 4-point Bezier curve
@@ -85,22 +85,28 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005
 
                 # finally, the cross-section parallelogram shape
                 parallelogram_deg = np.arctan(bump_diff/planal_length)
+                point1 = [-np.cos(parallelogram_deg)*wiggle_dist, np.sin(parallelogram_deg)*wiggle_dist]
                 point2 = [planal_length+np.cos(parallelogram_deg)*wiggle_dist, -bump_diff-np.sin(parallelogram_deg)*wiggle_dist]
-                seg_length = np.sqrt(point2[0]**2 + point2[1]**2) - wiggle_dist # smaller... 
                 point3 = point2.copy()
                 point3[1] += g_height
-                parallelogram = pygalmesh.Polygon2D([[0,0], point2, point3, [0, g_height]])
+                point4 = point1.copy()
+                point4[1] += g_height
+
+                seg_length = np.sqrt(planal_length**2 + bump_diff**2) # used for changing g_seed
+                parallelogram = pygalmesh.Polygon2D([point1, point2, point3, point4])
 
                 # create the shape (bugged, only z direction works)
                 half1 = pygalmesh.Extrude(
                     parallelogram,
                     [0.0, 0.0, g_width/2],
-                    0
+                    0,
+                    max_edge_size_at_feature_edges=max_edge_size_at_feature_edges
                 )
                 half2 = pygalmesh.Extrude(
                     parallelogram,
                     [0.0, 0.0, -g_width/2],
-                    0
+                    0,
+                    max_edge_size_at_feature_edges=max_edge_size_at_feature_edges
                 )
                 seg = pygalmesh.Union([half1, half2])
                 # rotate so facing x
@@ -130,9 +136,9 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005
     mesh = pygalmesh.generate_surface_mesh(
         wheel_peri,
         # bounding_sphere_radius = 1.0,
-        min_facet_angle = 15.0,
-        max_radius_surface_delaunay_ball = 0.0025,
-        max_facet_distance = 0.0025,
+        min_facet_angle = 7.0,
+        max_radius_surface_delaunay_ball = 0.002,
+        max_facet_distance = 0.002,
         verbose = False
     )
 
