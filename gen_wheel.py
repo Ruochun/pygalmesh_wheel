@@ -24,6 +24,8 @@ parser.add_argument("--amp", "-a", type=float, dest="g_amp", default=0.03,
                     help="Amplitude of the grousers (as they have sinusoidal shapes)")
 parser.add_argument("--curved", "-s", type=bool, dest="g_curved", default=False,
                     help="Grouser pattern shape: True if sinusoidal, False if straight")
+parser.add_argument("--out_file", "-f", type=str, dest="outfile", default="wheel.obj",
+                    help="Output obj file name")
 
 args = parser.parse_args(sys.argv[1:])
 
@@ -31,4 +33,4 @@ if __name__ == "__main__":
     mesh = wg.GenWheel(rad=args.rad, width=args.width, cp_deviation=args.cp_deviation, 
                        g_height=args.g_height, g_width=args.g_width, g_density=args.g_density, 
                        g_amp=args.g_amp, g_period=args.g_period, g_curved=args.g_curved)
-    mesh.write("wheel.obj")
+    mesh.write(args.outfile)
