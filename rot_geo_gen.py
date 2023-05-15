@@ -154,5 +154,7 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005
     mesh = trimesh.smoothing.filter_humphrey(mesh, alpha=0.1, beta=0.5, iterations=10, laplacian_operator=None)
     trimesh.exchange.export.export_mesh(mesh, filename)
 
+    return mesh
+
 if __name__ == "__main__":
     mesh = GenWheel(g_height=0.025, g_width=0.005, cp_deviation=0.1, g_density=12, g_amp=0.03, g_period=3, g_curved=False)
