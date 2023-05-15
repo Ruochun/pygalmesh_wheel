@@ -2,6 +2,10 @@ import pygalmesh
 import math
 import numpy as np
 from scipy.special import comb
+import os
+
+import trimesh
+import util
 
 shell_thickness = 0.02
 max_edge_size_at_feature_edges = 0.002
@@ -13,9 +17,11 @@ def pyBernstein(degree, t):
         B[i] = comb(degree, i)*(t**i)*(1.0 - t)**(degree - i)
     return B
 
+temp_filename = "_temp_wheel.obj"
+
 # 2D shapes are in x-z plane. After 3D wheels are created, they are rotated about x to make them face x-forward.
 # cp_deviation is the percentage that the mid 2 control points defining the wheel perimeter deviates from the position where the wheel surface is perfect flat, in z direction 
-def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005, g_density=12, g_amp=0., g_period=1, g_curved=False):
+def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005, g_density=12, g_amp=0., g_period=1, g_curved=False, filename="wheel.obj"):
     # The angle between 2 adjacent grousers
     g_angle = 2 * math.pi / g_density
     # 1 if this wheel is convex (bump outwards)
@@ -137,13 +143,16 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005
         wheel_peri,
         # bounding_sphere_radius = 1.0,
         min_facet_angle = 7.0,
-        max_radius_surface_delaunay_ball = 0.002,
-        max_facet_distance = 0.002,
+        max_radius_surface_delaunay_ball = 0.004,
+        max_facet_distance = 0.004,
         verbose = False
     )
 
-    return mesh
+    mesh.write(temp_filename)
+    mesh = util.as_mesh(trimesh.load(temp_filename))
+    os.remove(temp_filename)
+    mesh = trimesh.smoothing.filter_humphrey(mesh, alpha=0.1, beta=0.5, iterations=10, laplacian_operator=None)
+    trimesh.exchange.export.export_mesh(mesh, filename)
 
 if __name__ == "__main__":
     mesh = GenWheel(g_height=0.025, g_width=0.005, cp_deviation=0.1, g_density=12, g_amp=0.03, g_period=3, g_curved=False)
-    mesh.write("wheel.obj")

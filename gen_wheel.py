@@ -32,5 +32,5 @@ args = parser.parse_args(sys.argv[1:])
 if __name__ == "__main__":
     mesh = wg.GenWheel(rad=args.rad, width=args.width, cp_deviation=args.cp_deviation, 
                        g_height=args.g_height, g_width=args.g_width, g_density=args.g_density, 
-                       g_amp=args.g_amp, g_period=args.g_period, g_curved=args.g_curved)
-    mesh.write(args.outfile)
+                       g_amp=args.g_amp, g_period=args.g_period, g_curved=args.g_curved,
+                       filename=args.outfile)
