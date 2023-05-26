@@ -6,6 +6,7 @@ import os
 
 import trimesh
 import util
+import pyfqmr
 
 shell_thickness = 0.02
 max_edge_size_at_feature_edges = 0.002
@@ -21,14 +22,16 @@ temp_filename = "_temp_wheel.obj"
 
 # 2D shapes are in x-z plane. After 3D wheels are created, they are rotated about x to make them face x-forward.
 # cp_deviation is the percentage that the mid 2 control points defining the wheel perimeter deviates from the position where the wheel surface is perfect flat, in z direction 
-def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005, g_density=12, g_amp=0., g_period=1, g_curved=False, filename="wheel.obj"):
+# code fails when g_height = 0.025???? Why????
+def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.02, g_width=0.005, g_density=12, g_amp=0., g_period=1, g_curved=False, filename="wheel.obj", tri_count=25000):
     # The angle between 2 adjacent grousers
     g_angle = 2 * math.pi / g_density
     # 1 if this wheel is convex (bump outwards)
     convex = 1 if cp_deviation >= 0. else -1
     # small wiggle room needed in many places
     wiggle_dist = g_width / 4 
-    small_dist = 0.001
+    small_dist = 0.01
+    grouser_height = small_dist + g_height
 
     # the wheel perimeter shape is defined by a 4-point Bezier curve
     outer_CPs = np.empty((num_CPs, 2)).astype(float)
@@ -62,7 +65,7 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005
         # One grouser
         g_seg = []
         this_wheel_surf_rot = 0.
-        g_seed = np.array([0., -width/2, rad + g_height/2 - small_dist]) 
+        g_seed = np.array([0., -width/2, rad + (grouser_height)/2 - small_dist]) 
         last_signed_bump = 0.
         # Each grouser period, num of sample points
         num_g_p_sample = 4 if not(g_curved) else 16
@@ -94,9 +97,9 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005
                 point1 = [-np.cos(parallelogram_deg)*wiggle_dist, np.sin(parallelogram_deg)*wiggle_dist]
                 point2 = [planal_length+np.cos(parallelogram_deg)*wiggle_dist, -bump_diff-np.sin(parallelogram_deg)*wiggle_dist]
                 point3 = point2.copy()
-                point3[1] += g_height
+                point3[1] += grouser_height
                 point4 = point1.copy()
-                point4[1] += g_height
+                point4[1] += grouser_height
 
                 seg_length = np.sqrt(planal_length**2 + bump_diff**2) # used for changing g_seed
                 parallelogram = pygalmesh.Polygon2D([point1, point2, point3, point4])
@@ -116,7 +119,7 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005
                 )
                 seg = pygalmesh.Union([half1, half2])
                 # rotate so facing x
-                seg = pygalmesh.Translate(seg, [0, -g_height/2, 0])
+                seg = pygalmesh.Translate(seg, [0, -grouser_height/2, 0])
                 seg = pygalmesh.Rotate(seg, [0,1,0], -math.pi/2)
                 seg = pygalmesh.Rotate(seg, [1,0,0], -math.pi/2)
                 
@@ -148,11 +151,29 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.025, g_width=0.005
         verbose = False
     )
 
+    try:
+        os.remove(temp_filename)
+    except:
+        pass
+    try:
+        os.remove(filename)
+    except:
+        pass
     mesh.write(temp_filename)
     mesh = util.as_mesh(trimesh.load(temp_filename))
     os.remove(temp_filename)
     mesh = trimesh.smoothing.filter_humphrey(mesh, alpha=0.1, beta=0.5, iterations=10, laplacian_operator=None)
+
+    # Simplify object
+    mesh_simplifier = pyfqmr.Simplify()
+    mesh_simplifier.setMesh(mesh.vertices, mesh.faces)
+    mesh_simplifier.simplify_mesh(target_count = tri_count, aggressiveness=7, preserve_border=True, verbose=0)
+
+    vertices, faces, normals = mesh_simplifier.getMesh()
+    mesh = trimesh.base.Trimesh(vertices=vertices, faces=faces, face_normals=normals)
     trimesh.exchange.export.export_mesh(mesh, filename)
+    
+    # mesh.write(filename)
 
     return mesh
 

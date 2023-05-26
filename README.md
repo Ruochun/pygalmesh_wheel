@@ -1,2 +1,2 @@
 # pygalmesh_wheel
-Use pygalmesh to create a customizable wheel geometry
+Use pygalmesh, trimesh and pyfqmr to create a customizable wheel geometry
