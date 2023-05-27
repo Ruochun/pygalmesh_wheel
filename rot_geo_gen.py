@@ -7,6 +7,9 @@ import os
 import trimesh
 import util
 import pyfqmr
+import bpy
+# import pyacvd
+# import pyvista
 
 shell_thickness = 0.02
 max_edge_size_at_feature_edges = 0.002
@@ -18,7 +21,7 @@ def pyBernstein(degree, t):
         B[i] = comb(degree, i)*(t**i)*(1.0 - t)**(degree - i)
     return B
 
-temp_filename = "_temp_wheel.obj"
+temp_filename = "_temp_wheel.stl"
 
 # 2D shapes are in x-z plane. After 3D wheels are created, they are rotated about x to make them face x-forward.
 # cp_deviation is the percentage that the mid 2 control points defining the wheel perimeter deviates from the position where the wheel surface is perfect flat, in z direction 
@@ -161,17 +164,64 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.02, g_width=0.005,
         pass
     mesh.write(temp_filename)
     mesh = util.as_mesh(trimesh.load(temp_filename))
+    # mesh = pyvista.read(temp_filename)
     os.remove(temp_filename)
-    mesh = trimesh.smoothing.filter_humphrey(mesh, alpha=0.1, beta=0.5, iterations=10, laplacian_operator=None)
+
+    # mesh = trimesh.smoothing.filter_humphrey(mesh, alpha=0.05, beta=0.5, iterations=50, laplacian_operator=None)
+
+    # to_remesh = pyacvd.Clustering(mesh)
+    # to_remesh.cluster(50000)
+    # mesh = to_remesh.create_mesh()
+    # mesh.save(temp_filename, binary=False)
 
     # Simplify object
-    mesh_simplifier = pyfqmr.Simplify()
-    mesh_simplifier.setMesh(mesh.vertices, mesh.faces)
-    mesh_simplifier.simplify_mesh(target_count = tri_count, aggressiveness=7, preserve_border=True, verbose=0)
+    # mesh_simplifier = pyfqmr.Simplify()
+    # mesh_simplifier.setMesh(mesh.vertices, mesh.faces)
+    # mesh_simplifier.simplify_mesh(target_count = tri_count, aggressiveness=4, preserve_border=True, verbose=0)
 
-    vertices, faces, normals = mesh_simplifier.getMesh()
-    mesh = trimesh.base.Trimesh(vertices=vertices, faces=faces, face_normals=normals)
-    trimesh.exchange.export.export_mesh(mesh, filename)
+    # vertices, faces, normals = mesh_simplifier.getMesh()
+    # mesh = trimesh.base.Trimesh(vertices=vertices, faces=faces, face_normals=normals)
+
+    # Blender
+    # Create a new mesh object in Blender
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.ops.object.select_by_type(type='MESH')
+    bpy.ops.object.delete()
+
+    vertices = mesh.vertices.copy()
+    # Swap Z and Y. Blender is strange.
+    vertices[:, [1,2]] = vertices[:, [2,1]]
+    faces = [f.tolist() for f in mesh.faces]
+    mesh_data = bpy.data.meshes.new(name='SmoothedMesh')
+    mesh_data.from_pydata(vertices.tolist(), [], faces)
+    mesh_data.update()
+
+    object_data = bpy.data.objects.new('SmoothedMesh', mesh_data)
+    collection = bpy.context.collection
+    collection.objects.link(object_data)
+
+    # Set the object as active
+    bpy.context.view_layer.objects.active = object_data
+
+    # Select the mesh object and enter Edit Mode
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+
+    # Smooth the mesh
+    # bpy.ops.mesh.vertices_smooth(factor=1.0, repeat=3)
+    bpy.ops.mesh.vertices_smooth_laplacian(repeat=3, lambda_factor=1.0, preserve_volume=True)
+
+    # Update the mesh normals
+    bpy.ops.mesh.normals_make_consistent(inside=False)
+
+    # Exit Edit Mode
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+    # Export the mesh to a file
+    bpy.ops.export_scene.obj(filepath=filename, use_selection=False)
+
+    # mesh = util.as_mesh(trimesh.load(temp_filename))
+    # trimesh.exchange.export.export_mesh(mesh, filename)
     
     # mesh.write(filename)
 
