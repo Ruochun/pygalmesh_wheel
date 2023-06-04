@@ -167,14 +167,14 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.02, g_width=0.005,
     # mesh = pyvista.read(temp_filename)
     os.remove(temp_filename)
 
-    # mesh = trimesh.smoothing.filter_humphrey(mesh, alpha=0.05, beta=0.5, iterations=50, laplacian_operator=None)
+    mesh = trimesh.smoothing.filter_humphrey(mesh, alpha=0.05, beta=0.5, iterations=50, laplacian_operator=None)
 
     # to_remesh = pyacvd.Clustering(mesh)
     # to_remesh.cluster(50000)
     # mesh = to_remesh.create_mesh()
     # mesh.save(temp_filename, binary=False)
 
-    # Simplify object
+    # # Simplify object
     # mesh_simplifier = pyfqmr.Simplify()
     # mesh_simplifier.setMesh(mesh.vertices, mesh.faces)
     # mesh_simplifier.simplify_mesh(target_count = tri_count, aggressiveness=4, preserve_border=True, verbose=0)
