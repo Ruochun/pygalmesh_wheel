@@ -149,8 +149,8 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.02, g_width=0.005,
         wheel_peri,
         # bounding_sphere_radius = 1.0,
         min_facet_angle = 7.0,
-        max_radius_surface_delaunay_ball = 0.004,
-        max_facet_distance = 0.004,
+        max_radius_surface_delaunay_ball = 0.0035,
+        max_facet_distance = 0.008,
         verbose = False
     )
 
@@ -174,7 +174,7 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.02, g_width=0.005,
     # mesh = to_remesh.create_mesh()
     # mesh.save(temp_filename, binary=False)
 
-    # # Simplify object
+    # Simplify object
     # mesh_simplifier = pyfqmr.Simplify()
     # mesh_simplifier.setMesh(mesh.vertices, mesh.faces)
     # mesh_simplifier.simplify_mesh(target_count = tri_count, aggressiveness=4, preserve_border=True, verbose=0)
