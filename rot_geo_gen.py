@@ -3,6 +3,7 @@ import math
 import numpy as np
 from scipy.special import comb
 import os
+import random
 
 import trimesh
 import util
@@ -20,8 +21,6 @@ def pyBernstein(degree, t):
     for i in range(len(B)):
         B[i] = comb(degree, i)*(t**i)*(1.0 - t)**(degree - i)
     return B
-
-temp_filename = "_temp_wheel.stl"
 
 # 2D shapes are in x-z plane. After 3D wheels are created, they are rotated about x to make them face x-forward.
 # cp_deviation is the percentage that the mid 2 control points defining the wheel perimeter deviates from the position where the wheel surface is perfect flat, in z direction 
@@ -154,6 +153,7 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.02, g_width=0.005,
         verbose = False
     )
 
+    temp_filename = "_temp_wheel_" + str(random.randint(0, 999999999)) + ".stl"
     try:
         os.remove(temp_filename)
     except:
@@ -162,6 +162,13 @@ def GenWheel(rad=0.25, width=0.2, cp_deviation=0., g_height=0.02, g_width=0.005,
         os.remove(filename)
     except:
         pass
+    try:
+        for name in os.listdir():
+            if name[-3:] == 'mtl':
+                os.remove(name)
+    except:
+        pass
+    
     mesh.write(temp_filename)
     mesh = util.as_mesh(trimesh.load(temp_filename))
     # mesh = pyvista.read(temp_filename)
